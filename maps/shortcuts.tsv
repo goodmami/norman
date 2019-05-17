@@ -1,0 +1,8 @@
+cause	cause-01	ARG1	ARG0
+cost	cost-01	ARG1	ARG2
+employed-by	have-org-role-91	ARG0	ARG1
+meaning	mean-01	ARG1	ARG2
+role	have-org-role-91	ARG0	ARG2
+subset	include-91	ARG2	ARG1
+superset	include-91	ARG1	ARG2
+
