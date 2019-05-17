@@ -67,6 +67,11 @@ def _unique_var(concept, variables, prefix):
 
 
 def dereify(g, dereifications):
+    eligible = _eligible_dereifications(g, dereifications)
+    triples = []
+    for triple in g.triples():
+        if triple.source in candidates:
+            
     agenda = _dereification_agenda(g, dereifications)
     triples = []
     for triple in g.triples():
@@ -80,20 +85,34 @@ def dereify(g, dereifications):
     return penman.Graph(triples, top=g.top)
 
 
+def _eligible_dereifications(g, dereifications):
+    # initially consider all with matching concepts
+    candidates = {src for src, role, tgt in g.triples()
+                  if (role == 'instance'
+                      and tgt in dereifications)}
+    # filter "fixed" nodes: those that are the target in a relation
+    candidates -= {tgt for _, _, tgt in g.edges()}.union([g.top])
+    # filter those without the necessary relations
+    relmap = {}
+    for src, rel, tgt in g.triples():
+        relmap.setdefault(src, {}).setdefault(rel, []).append(tgt)
+    candidates -= {}
+
+
 def _dereification_agenda(g, dereifications):
     """
     Find eligible dereifications and return the replacements.
     """
     agenda = {}
     fixed = {tgt for _, _, tgt in g.edges()}.union([g.top])
-    for src, _, tgt in g.triples(relation='instance'):
-        if src not in fixed and tgt in dereifications:
+    for triple in g.triples(relation='instance'):
+        if triple.source not in fixed and triple.target in dereifications:
             rels = {t.relation: t
-                    for t in g.triples(source=src)
+                    for t in g.triples(source=triple.source)
                     if t.relation != 'instance'}
             used = set()
             agendum = []
-            for role, src_role, tgt_role in dereifications[tgt]:
+            for role, src_role, tgt_role in dereifications[triple.target]:
                 if src_role in rels and tgt_role in rels:
                     _src = rels[src_role].target
                     _tgt = rels[tgt_role].target
@@ -104,7 +123,7 @@ def _dereification_agenda(g, dereifications):
                     used.add(tgt_role)
             # only include for a full mapping
             if used == set(rels):
-                agenda[src] = agendum
+                agenda[triple] = agendum
     return agenda
 
 
