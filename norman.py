@@ -33,12 +33,12 @@ class RobustAMRCodec(penman.AMRCodec):
 codec = RobustAMRCodec(indent=6)
 
 
-def reify(g, reifications, prefix=None):
+def reify(g, re_map, prefix=None):
     variables = g.variables()
     triples = []
     for triple in g.triples():
-        if triple.relation in reifications:
-            concept, srcrole, tgtrole = reifications[triple.relation]
+        if triple.relation in re_map:
+            concept, srcrole, tgtrole = re_map[triple.relation]
             var = _unique_var(concept, variables, prefix)
             variables.add(var)
             triples.extend([
@@ -66,64 +66,57 @@ def _unique_var(concept, variables, prefix):
     return var
 
 
-def dereify(g, dereifications):
-    eligible = _eligible_dereifications(g, dereifications)
-    triples = []
-    for triple in g.triples():
-        if triple.source in candidates:
-            
-    agenda = _dereification_agenda(g, dereifications)
+def collapse(g, co_map):
+    agenda = _dereification_agenda(g, co_map)
     triples = []
     for triple in g.triples():
         if triple.source in agenda:
-            triples.extend(agenda[triple.source])
-            # clear agenda but don't remove key so we can still remove
-            # the remaining dereified relations
-            agenda[triple.source] = []
+            incoming_triple, agendum = agenda[triple.source]
+            # only replace on the relation going into the reified node
+            # so the collapsed relation goes in the right spot
+            if triple == incoming_triple:
+                triples.extend(agendum)
         else:
             triples.append(triple)
     return penman.Graph(triples, top=g.top)
 
 
-def _eligible_dereifications(g, dereifications):
-    # initially consider all with matching concepts
-    candidates = {src for src, role, tgt in g.triples()
-                  if (role == 'instance'
-                      and tgt in dereifications)}
-    # filter "fixed" nodes: those that are the target in a relation
-    candidates -= {tgt for _, _, tgt in g.edges()}.union([g.top])
-    # filter those without the necessary relations
-    relmap = {}
-    for src, rel, tgt in g.triples():
-        relmap.setdefault(src, {}).setdefault(rel, []).append(tgt)
-    candidates -= {}
-
-
-def _dereification_agenda(g, dereifications):
+def _dereification_agenda(g, co_map):
     """
     Find eligible dereifications and return the replacements.
     """
     agenda = {}
+    variables = g.variables()
     fixed = {tgt for _, _, tgt in g.edges()}.union([g.top])
     for triple in g.triples(relation='instance'):
-        if triple.source not in fixed and triple.target in dereifications:
+        if triple.source not in fixed and triple.target in co_map:
             rels = {t.relation: t
                     for t in g.triples(source=triple.source)
                     if t.relation != 'instance'}
             used = set()
             agendum = []
-            for role, src_role, tgt_role in dereifications[triple.target]:
-                if src_role in rels and tgt_role in rels:
-                    _src = rels[src_role].target
-                    _tgt = rels[tgt_role].target
-                    inverted = rels[tgt_role].inverted
-                    agendum.append(penman.Triple(_src, role, _tgt,
-                                                 inverted=inverted))
-                    used.add(src_role)
-                    used.add(tgt_role)
+            incoming_triple = None
+            for role, src_role, tgt_role in co_map[triple.target]:
+                if not (src_role in rels and tgt_role in rels):
+                    continue  # source and target must exist
+                src = rels[src_role]
+                tgt = rels[tgt_role]
+                if (src_role in used and tgt_role in used):
+                    continue  # don't duplicate info
+                elif src.target not in variables:
+                    continue  # don't create new nodes from attributes
+                agendum.append(penman.Triple(src.target, role, tgt.target,
+                                             inverted=tgt.inverted))
+                used.add(src_role)
+                used.add(tgt_role)
+                if src.inverted:
+                    incoming_triple = src
+                elif tgt.inverted:
+                    incoming_triple = tgt
             # only include for a full mapping
             if used == set(rels):
-                agenda[triple] = agendum
+                assert incoming_triple is not None
+                agenda[triple.source] = (incoming_triple, agendum)
     return agenda
 
 
@@ -139,9 +132,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input', help='input file of AMRs (or - for stdin)')
     parser.add_argument('-r', '--reify', metavar='FILE',
-                        help='reify relations using reifications in FILE')
-    parser.add_argument('-d', '--dereify', metavar='FILE',
-                        help='dereify relations using reifications in FILE')
+                        help='reify relations to nodes using mapping in FILE')
+    parser.add_argument('-c', '--collapse', metavar='FILE',
+                        help='collapse nodes to relations using mapping in FILE')
     parser.add_argument('--prefix', metavar='C', help='variable prefix')
     parser.add_argument('--indent', metavar='N', type=int, help='indent level')
 
@@ -157,21 +150,21 @@ def main():
             gs = robust_load(fh.read())
 
     if args.reify:
-        reifications = {}
+        re_map = {}
         with open(args.reify) as fh:
             reader = csv.reader(fh, delimiter='\t')
             for relation, concept, source, target in reader:
-                reifications[relation] = (concept, source, target)
-        gs = [reify(g, reifications, args.prefix) for g in gs]
+                re_map[relation] = (concept, source, target)
+        gs = [reify(g, re_map, args.prefix) for g in gs]
 
-    if args.dereify:
-        dereifications = {}
-        with open(args.dereify) as fh:
+    if args.collapse:
+        co_map = {}
+        with open(args.collapse) as fh:
             reader = csv.reader(fh, delimiter='\t')
             for relation, concept, source, target in reader:
-                dereifications.setdefault(concept, []).append(
+                co_map.setdefault(concept, []).append(
                     (relation, source, target))
-        gs = [dereify(g, dereifications) for g in gs]
+        gs = [collapse(g, co_map) for g in gs]
 
     if args.indent is not None:
         codec.indent = args.indent
