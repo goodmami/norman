@@ -17,6 +17,7 @@ class RobustAMRCodec(penman.AMRCodec):
 
     def __init__(self, *args, **kwargs):
         self._inversions['mod'] = 'domain'
+        self._deinversions = dict(penman.AMRCodec._deinversions)
         del self._deinversions['mod']
         super().__init__(*args, **kwargs)
 
@@ -128,6 +129,25 @@ def robust_load(s):
         yield from robust_load(s[e.pos+1:])
 
 
+def load_reifications(f):
+    re_map = {}
+    with open(f) as fh:
+        reader = csv.reader(fh, delimiter='\t')
+        for relation, concept, source, target in reader:
+            re_map[relation] = (concept, source, target)
+    return re_map
+
+
+def load_dereifications(f):
+    co_map = {}
+    with open(f) as fh:
+        reader = csv.reader(fh, delimiter='\t')
+        for relation, concept, source, target in reader:
+            co_map.setdefault(concept, []).append(
+                (relation, source, target))
+    return co_map
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input', help='input file of AMRs (or - for stdin)')
@@ -150,20 +170,11 @@ def main():
             gs = robust_load(fh.read())
 
     if args.reify:
-        re_map = {}
-        with open(args.reify) as fh:
-            reader = csv.reader(fh, delimiter='\t')
-            for relation, concept, source, target in reader:
-                re_map[relation] = (concept, source, target)
+        re_map = load_reifications(args.reify)
         gs = [reify(g, re_map, args.prefix) for g in gs]
 
     if args.collapse:
-        co_map = {}
-        with open(args.collapse) as fh:
-            reader = csv.reader(fh, delimiter='\t')
-            for relation, concept, source, target in reader:
-                co_map.setdefault(concept, []).append(
-                    (relation, source, target))
+        co_map = load_dereifications(args.collapse)
         gs = [collapse(g, co_map) for g in gs]
 
     if args.indent is not None:
