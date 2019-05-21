@@ -1,0 +1,7 @@
+# ::snt "He rode the bicycle carelessly."
+(r / ride-01
+   :ARG0 (h / he)
+   :ARG1 (b / bicycle)
+   :ARG1-of (h2 / have-manner-91
+      :ARG2 (c / care-04
+         :polarity -)))

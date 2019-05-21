@@ -1,0 +1,5 @@
+# ::snt "He rode the bicycle carefully."
+(r / ride-01
+   :ARG0 (h / he)
+   :ARG1 (b / bicycle)
+   :manner (c / care-04))
