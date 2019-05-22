@@ -4,13 +4,14 @@ import sys
 import re
 import argparse
 import csv
+from collections import defaultdict
 
 import penman
 
 
 class RobustAMRCodec(penman.AMRCodec):
     NODE_ENTER_RE = re.compile(r'\s*(\()\s*')
-    NODETYPE_RE = re.compile(r'((?:"[^"\\]*(?:\\.[^"\\]*)*")|[^\s:()\/,]*)')
+    NODETYPE_RE = re.compile(r'((?:"[^"\\]*(?:\\.[^"\\]*)*")|[^\s:()\/]*)')
     VAR_RE = re.compile('({}|{})'.format(
         penman.PENMANCodec.STRING_RE.pattern,
         penman.PENMANCodec.ATOM_RE.pattern))
@@ -21,14 +22,23 @@ class RobustAMRCodec(penman.AMRCodec):
         del self._deinversions['mod']
         super().__init__(*args, **kwargs)
 
-    def encode(self, g, top=None, triples=False):
-        # ensure every node has a type
-        g_triples = g.triples()
-        types = {t.source: t for t in g_triples if t.relation == 'instance'}
-        for src in set(g.variables()).difference(types):
-            g_triples.append(penman.Triple(src, 'instance', 'amr-missing'))
-        g_ = penman.Graph(g_triples, g.top)
-        return super().encode(g_, top=top, triples=triples)
+    # def encode(self, g, top=None, triples=False):
+    #     # ensure every node has a type
+    #     g_triples = g.triples()
+    #     types = {t.source: t for t in g_triples if t.relation == 'instance'}
+    #     for src in set(g.variables()).difference(types):
+    #         g_triples.append(penman.Triple(src, 'instance', 'amr-missing'))
+    #     g_ = penman.Graph(g_triples, g.top)
+    #     return super().encode(g_, top=top, triples=triples)
+
+    def triples_to_graph(self, triples, top=None):
+        counts = defaultdict(int)
+        for triple in triples:
+            rel = triple[1]
+            counts[rel] += 1
+        g = super().triples_to_graph(triples, top=top)
+        g.original_role_counts = counts
+        return g
 
 
 codec = RobustAMRCodec(indent=6)
@@ -36,6 +46,7 @@ codec = RobustAMRCodec(indent=6)
 
 def reify(g, re_map, prefix=None):
     variables = g.variables()
+    counts = defaultdict(int)
     triples = []
     for triple in g.triples():
         if triple.relation in re_map:
@@ -51,9 +62,12 @@ def reify(g, re_map, prefix=None):
                 penman.Triple(var, tgtrole, triple.target,
                               inverted=triple.inverted)
             ])
+            counts[triple.relation] += 1
         else:
             triples.append(triple)
-    return penman.Graph(triples, top=g.top)
+    g = penman.Graph(triples, top=g.top)
+    g.reified_counts = counts
+    return g
 
 
 def _unique_var(concept, variables, prefix):
@@ -69,6 +83,9 @@ def _unique_var(concept, variables, prefix):
 
 def collapse(g, co_map):
     agenda = _dereification_agenda(g, co_map)
+    counts = defaultdict(int)
+    types = {t.source: t.target for t in g.triples()
+             if t.relation == 'instance'}
     triples = []
     for triple in g.triples():
         if triple.source in agenda:
@@ -77,9 +94,12 @@ def collapse(g, co_map):
             # so the collapsed relation goes in the right spot
             if triple == incoming_triple:
                 triples.extend(agendum)
+                counts[types.get(triple.source,'?')] += 1
         else:
             triples.append(triple)
-    return penman.Graph(triples, top=g.top)
+    g = penman.Graph(triples, top=g.top)
+    g.collapsed_counts = counts
+    return g
 
 
 def _dereification_agenda(g, co_map):
