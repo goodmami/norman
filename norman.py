@@ -9,27 +9,19 @@ from collections import defaultdict
 import penman
 
 
-class RobustAMRCodec(penman.AMRCodec):
+class RobustAMRCodec(penman.PENMANCodec):
     NODE_ENTER_RE = re.compile(r'\s*(\()\s*')
     NODETYPE_RE = re.compile(r'((?:"[^"\\]*(?:\\.[^"\\]*)*")|[^\s:()\/]*)')
     VAR_RE = re.compile('({}|{})'.format(
         penman.PENMANCodec.STRING_RE.pattern,
         penman.PENMANCodec.ATOM_RE.pattern))
 
-    def __init__(self, *args, **kwargs):
-        self._inversions['mod'] = 'domain'
-        self._deinversions = dict(penman.AMRCodec._deinversions)
-        del self._deinversions['mod']
-        super().__init__(*args, **kwargs)
-
-    # def encode(self, g, top=None, triples=False):
-    #     # ensure every node has a type
-    #     g_triples = g.triples()
-    #     types = {t.source: t for t in g_triples if t.relation == 'instance'}
-    #     for src in set(g.variables()).difference(types):
-    #         g_triples.append(penman.Triple(src, 'instance', 'amr-missing'))
-    #     g_ = penman.Graph(g_triples, g.top)
-    #     return super().encode(g_, top=top, triples=triples)
+    def handle_triple(self, lhs, relation, rhs):
+        if relation == ':mod-of':
+            relation = ':domain'
+        elif relation == ':domain-of':
+            relation = ':mod'
+        return super().handle_triple(lhs, relation, rhs)
 
     def triples_to_graph(self, triples, top=None):
         counts = defaultdict(int)
@@ -141,6 +133,31 @@ def _dereification_agenda(g, co_map):
     return agenda
 
 
+def conceptualize(g):
+    variables = g.variables()
+    # filter out triples with empty instances
+    triples = [t for t in g.triples()
+               if t.relation != 'instance' or t.target]
+    # ensure every node has a type
+    types = {t.source: t for t in triples if t.relation == 'instance'}
+    for src in variables.difference(types):
+        triples.append(penman.Triple(src, 'instance', 'amr-missing'))
+    # ensure constants are nodes
+    new_triples = []
+    for triple in triples:
+        if triple.relation != 'instance' and triple.target not in variables:
+            var = _unique_var('', variables, '_')
+            new_triples.extend([
+                penman.Triple(var, 'instance', triple.target),
+                penman.Triple(triple.source, triple.relation, var)
+            ])
+            variables.add(var)
+        else:
+            new_triples.append(triple)
+
+    return penman.Graph(new_triples, g.top)
+
+
 def robust_load(s):
     try:
         for g in codec.iterdecode(s):
@@ -173,15 +190,22 @@ def main():
     parser.add_argument('input', help='input file of AMRs (or - for stdin)')
     parser.add_argument('-r', '--reify', metavar='FILE',
                         help='reify relations to nodes using mapping in FILE')
-    parser.add_argument('-c', '--collapse', metavar='FILE',
-                        help='collapse nodes to relations using mapping in FILE')
+    parser.add_argument(
+        '-c', '--collapse', metavar='FILE',
+        help='collapse nodes to relations using mapping in FILE')
+    parser.add_argument('--conceptualize', action='store_true',
+                        help='ensure every node has a concept')
     parser.add_argument('--prefix', metavar='C', help='variable prefix')
     parser.add_argument('--indent', metavar='N', type=int, help='indent level')
+    parser.add_argument('--triples', action='store_true',
+                        help='output triples')
 
     args = parser.parse_args()
 
     if args.input == '-':
         args.input = sys.stdin
+    if args.indent:
+        codec.indent = args.indent
 
     if hasattr(args.input, 'read'):
         gs = robust_load(args.input.read())
@@ -197,11 +221,11 @@ def main():
         co_map = load_dereifications(args.collapse)
         gs = [collapse(g, co_map) for g in gs]
 
-    if args.indent is not None:
-        codec.indent = args.indent
+    if args.conceptualize:
+        gs = [conceptualize(g) for g in gs]
 
     for g in gs:
-        print(codec.encode(g))
+        print(codec.encode(g, triples=args.triples))
         print()
 
 

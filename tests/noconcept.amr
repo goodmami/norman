@@ -1,0 +1,4 @@
+(a / a-concept
+   :ARG0 (b)
+   :ARG1 (c / )
+   :ARG2 7)
