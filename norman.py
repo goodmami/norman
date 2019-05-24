@@ -16,12 +16,39 @@ class RobustAMRCodec(penman.PENMANCodec):
         penman.PENMANCodec.STRING_RE.pattern,
         penman.PENMANCodec.ATOM_RE.pattern))
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.canonical_role_inversion = False
+
     def handle_triple(self, lhs, relation, rhs):
-        if relation == ':mod-of':
-            relation = ':domain'
-        elif relation == ':domain-of':
-            relation = ':mod'
+        if self.canonical_role_inversion:
+            if relation == ':mod-of':
+                relation = ':domain'
+            elif relation == ':domain-of':
+                relation = ':mod'
+            elif relation == ':consist':
+                relation = ':consist-of-of'
+            elif relation == ':prep-on-behalf':
+                relation = ':prep-on-behalf-of-of'
+            elif relation == ':prep-out':
+                relation = ':prep-out-of-of'
         return super().handle_triple(lhs, relation, rhs)
+
+    def is_relation_inverted(self, relation):
+        if self.canonical_role_inversion:
+            if relation in ('consist-of', 'prep-on-behalf-of', 'prep-out-of'):
+                return False
+        return super().is_relation_inverted(relation)
+
+    def invert_relation(self, relation):
+        if self.canonical_role_inversion:
+            if relation in ('consist-of', 'prep-on-behalf-of', 'prep-out-of'):
+                return relation + '-of'
+            elif relation == 'mod':
+                return 'domain'
+            elif relation == 'domain':
+                return 'mod'
+        return super().invert_relation(relation)
 
     def triples_to_graph(self, triples, top=None):
         counts = defaultdict(int)
@@ -86,7 +113,7 @@ def collapse(g, co_map):
             # so the collapsed relation goes in the right spot
             if triple == incoming_triple:
                 triples.extend(agendum)
-                counts[types.get(triple.source,'?')] += 1
+                counts[types.get(triple.source, '?')] += 1
         else:
             triples.append(triple)
     g = penman.Graph(triples, top=g.top)
@@ -188,6 +215,10 @@ def load_dereifications(f):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input', help='input file of AMRs (or - for stdin)')
+    parser.add_argument(
+        '-i', '--canonical-role-inversion',
+        action='store_true',
+        help='canonicalize role inversions')
     parser.add_argument('-r', '--reify', metavar='FILE',
                         help='reify relations to nodes using mapping in FILE')
     parser.add_argument(
@@ -206,6 +237,8 @@ def main():
         args.input = sys.stdin
     if args.indent:
         codec.indent = args.indent
+    if args.canonical_role_inversion:
+        codec.canonical_role_inversion = True
 
     if hasattr(args.input, 'read'):
         gs = robust_load(args.input.read())
