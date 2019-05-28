@@ -73,6 +73,10 @@ if [ "$NORM" == "true" ]; then
 	       "$path" \
 	       > "$OUT"/"$f.de.txt"
         python norman.py \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.top.txt"
+        python norman.py \
 	       --collapse maps/dereifications.tsv \
 	       "$OUT"/"$f.re.txt" \
 	       > "$OUT"/"$f.re.de.txt"
@@ -87,6 +91,12 @@ if [ "$NORM" == "true" ]; then
 	       --conceptualize \
 	       "$path" \
 	       > "$OUT"/"$f.cri.ca.re.txt"
+        python norman.py \
+	       --canonical-role-inversion \
+	       --reify maps/reifications.tsv \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.cri.re.top.txt"
     done
 fi
 
@@ -129,6 +139,10 @@ if [ "$EVAL" == "true" ]; then
         evaluate "$OUT"/"$g.re.txt" "$OUT"/"$s.re.txt" \
 		 > "$OUT"/"$s.re.eval"
 
+        echo "Evaluating $g and $s (topped)"
+        evaluate "$OUT"/"$g.top.txt" "$OUT"/"$s.top.txt" \
+		 > "$OUT"/"$s.top.eval"
+
         echo "Evaluating $g and $s (canonicalized and reified)"
         evaluate "$OUT"/"$g.cri.re.txt" "$OUT"/"$s.cri.re.txt" \
 		 > "$OUT"/"$s.cri.re.eval"
@@ -136,5 +150,9 @@ if [ "$EVAL" == "true" ]; then
         echo "Evaluating $g and $s (canonicalized, reified, and conceptualized)"
         evaluate "$OUT"/"$g.cri.ca.re.txt" "$OUT"/"$s.cri.ca.re.txt" \
 		 > "$OUT"/"$s.cri.ca.re.eval"
+
+        echo "Evaluating $g and $s (canonicalized, reified, and topped)"
+        evaluate "$OUT"/"$g.cri.re.top.txt" "$OUT"/"$s.cri.re.top.txt" \
+		 > "$OUT"/"$s.cri.re.top.eval"
     done
 fi

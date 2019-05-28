@@ -185,12 +185,24 @@ def conceptualize(g):
     return penman.Graph(new_triples, g.top)
 
 
-def robust_load(s):
+def robust_load(s, node_tops):
+    if node_tops:
+        lines = []
+        for line in s.splitlines():
+            if line.startswith('#'):
+                continue
+            else:
+                lines.append(
+                    re.sub(r'(:[^ ]*)\s+\(([^ /]+)\s*\/',
+                           r':TOP-of \2 \1 (\2 /',
+                           line))
+        s = '\n'.join(lines)
+
     try:
         for g in codec.iterdecode(s):
             yield g
     except penman.DecodeError as e:
-        yield from robust_load(s[e.pos+1:])
+        yield from robust_load(s[e.pos+1:], node_tops)
 
 
 def load_reifications(f):
@@ -226,6 +238,8 @@ def main():
         help='collapse nodes to relations using mapping in FILE')
     parser.add_argument('--conceptualize', action='store_true',
                         help='ensure every node has a concept')
+    parser.add_argument('--node-tops', action='store_true',
+                        help='add relations to mark non-reentrant relations')
     parser.add_argument('--prefix', metavar='C', help='variable prefix')
     parser.add_argument('--indent', metavar='N', type=int, help='indent level')
     parser.add_argument('--triples', action='store_true',
@@ -241,10 +255,10 @@ def main():
         codec.canonical_role_inversion = True
 
     if hasattr(args.input, 'read'):
-        gs = robust_load(args.input.read())
+        gs = robust_load(args.input.read(), args.node_tops)
     else:
         with open(args.input) as fh:
-            gs = robust_load(fh.read())
+            gs = robust_load(fh.read(), args.node_tops)
 
     if args.reify:
         re_map = load_reifications(args.reify)
