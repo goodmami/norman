@@ -166,9 +166,9 @@ def conceptualize(g):
     triples = [t for t in g.triples()
                if t.relation != 'instance' or t.target]
     # ensure every node has a type
-    types = {t.source: t for t in triples if t.relation == 'instance'}
-    for src in variables.difference(types):
-        triples.append(penman.Triple(src, 'instance', 'amr-missing'))
+    # types = {t.source: t for t in triples if t.relation == 'instance'}
+    # for src in variables.difference(types):
+    #     triples.append(penman.Triple(src, 'instance', 'amr-missing'))
     # ensure constants are nodes
     new_triples = []
     for triple in triples:
@@ -185,7 +185,7 @@ def conceptualize(g):
     return penman.Graph(new_triples, g.top)
 
 
-def robust_load(s, node_tops):
+def robust_load(s, node_tops=False):
     if node_tops:
         lines = []
         for line in s.splitlines():
@@ -194,7 +194,7 @@ def robust_load(s, node_tops):
             else:
                 lines.append(
                     re.sub(r'(:[^ ]*)\s+\(([^ /]+)\s*\/',
-                           r':TOP-of \2 \1 (\2 /',
+                           r':TOP \2 \1 (\2 /',
                            line))
         s = '\n'.join(lines)
 

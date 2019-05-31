@@ -59,44 +59,88 @@ if [ "$NORM" == "true" ]; then
         python norman.py \
 	       "$path" \
 	       --canonical-role-inversion \
-	       > "$OUT"/"$f.cri.txt"
+	       > "$OUT"/"$f.i.txt"
         python norman.py \
 	       --conceptualize \
 	       "$path" \
-	       > "$OUT"/"$f.ca.txt"
+	       > "$OUT"/"$f.a.txt"
         python norman.py \
 	       --reify maps/reifications.tsv \
 	       "$path" \
-	       > "$OUT"/"$f.re.txt"
+	       > "$OUT"/"$f.r.txt"
         python norman.py \
 	       --collapse maps/dereifications.tsv \
 	       "$path" \
-	       > "$OUT"/"$f.de.txt"
+	       > "$OUT"/"$f.d.txt"
         python norman.py \
 	       --node-tops \
 	       "$path" \
-	       > "$OUT"/"$f.top.txt"
+	       > "$OUT"/"$f.t.txt"
         python norman.py \
 	       --collapse maps/dereifications.tsv \
-	       "$OUT"/"$f.re.txt" \
-	       > "$OUT"/"$f.re.de.txt"
+	       "$OUT"/"$f.r.txt" \
+	       > "$OUT"/"$f.r.d.txt"
+        python norman.py \
+	       --canonical-role-inversion \
+	       --conceptualize \
+	       "$path" \
+	       > "$OUT"/"$f.i.a.txt"
         python norman.py \
 	       --canonical-role-inversion \
 	       --reify maps/reifications.tsv \
 	       "$path" \
-	       > "$OUT"/"$f.cri.re.txt"
+	       > "$OUT"/"$f.i.r.txt"
+        python norman.py \
+	       --canonical-role-inversion \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.i.t.txt"
+        python norman.py \
+	       --conceptualize \
+	       --reify maps/reifications.tsv \
+	       "$path" \
+	       > "$OUT"/"$f.a.r.txt"
+        python norman.py \
+	       --conceptualize \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.a.t.txt"
+        python norman.py \
+	       --reify maps/reifications.tsv \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.r.t.txt"
         python norman.py \
 	       --canonical-role-inversion \
 	       --reify maps/reifications.tsv \
 	       --conceptualize \
 	       "$path" \
-	       > "$OUT"/"$f.cri.ca.re.txt"
+	       > "$OUT"/"$f.i.a.r.txt"
+        python norman.py \
+	       --canonical-role-inversion \
+	       --conceptualize \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.i.a.t.txt"
         python norman.py \
 	       --canonical-role-inversion \
 	       --reify maps/reifications.tsv \
 	       --node-tops \
 	       "$path" \
-	       > "$OUT"/"$f.cri.re.top.txt"
+	       > "$OUT"/"$f.i.r.t.txt"
+        python norman.py \
+	       --conceptualize \
+	       --reify maps/reifications.tsv \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.a.r.t.txt"
+        python norman.py \
+	       --canonical-role-inversion \
+	       --conceptualize \
+	       --reify maps/reifications.tsv \
+	       --node-tops \
+	       "$path" \
+	       > "$OUT"/"$f.i.a.r.t.txt"
     done
 fi
 
@@ -104,17 +148,17 @@ if [ "$EVAL" == "true" ]; then
     g=$(basename "${1%%.txt}")
     shift  # remove gold path from "$@"
 
-    echo "Evaluating $g to itself (conceptualized)"
-    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.ca.txt" \
-	     > "$OUT"/"$g.ca.eval"
+    echo "Evaluating $g to itself (attr-re)"
+    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.a.txt" \
+	     > "$OUT"/"$g.a.eval"
 
-    echo "Evaluating $g to itself (reified)"
-    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.re.txt" \
-	     > "$OUT"/"$g.re.eval"
+    echo "Evaluating $g to itself (relation-re)"
+    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.r.txt" \
+	     > "$OUT"/"$g.r.eval"
 
-    echo "Evaluating $g to itself (conceptualized and reified)"
-    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.cri.ca.re.txt" \
-	     > "$OUT"/"$g.cri.ca.re.eval"
+    echo "Evaluating $g to itself (attr-re and relation-re)"
+    evaluate "$OUT"/"$g.raw.txt" "$OUT"/"$g.a.r.txt" \
+	     > "$OUT"/"$g.a.r.eval"
 
     for sys in "$@"; do
         s=$(basename "${sys%%.txt}")
@@ -127,32 +171,52 @@ if [ "$EVAL" == "true" ]; then
         evaluate "$OUT"/"$g.norm.txt" "$OUT"/"$s.norm.txt" \
 		 > "$OUT"/"$s.norm.eval"
 
-        echo "Evaluating $g and $s (canonicalized)"
-        evaluate "$OUT"/"$g.cri.txt" "$OUT"/"$s.cri.txt" \
-		 > "$OUT"/"$s.cri.eval"
+        echo "Evaluating $g and $s (inv)"
+        evaluate "$OUT"/"$g.i.txt" "$OUT"/"$s.i.txt" \
+		 > "$OUT"/"$s.i.eval"
 
-        echo "Evaluating $g and $s (conceptualized)"
-        evaluate "$OUT"/"$g.ca.txt" "$OUT"/"$s.ca.txt" \
-		 > "$OUT"/"$s.ca.eval"
+        echo "Evaluating $g and $s (attr-re)"
+        evaluate "$OUT"/"$g.a.txt" "$OUT"/"$s.a.txt" \
+		 > "$OUT"/"$s.a.eval"
 
-        echo "Evaluating $g and $s (reified)"
-        evaluate "$OUT"/"$g.re.txt" "$OUT"/"$s.re.txt" \
-		 > "$OUT"/"$s.re.eval"
+        echo "Evaluating $g and $s (relation-re)"
+        evaluate "$OUT"/"$g.r.txt" "$OUT"/"$s.r.txt" \
+		 > "$OUT"/"$s.r.eval"
 
         echo "Evaluating $g and $s (topped)"
-        evaluate "$OUT"/"$g.top.txt" "$OUT"/"$s.top.txt" \
-		 > "$OUT"/"$s.top.eval"
+        evaluate "$OUT"/"$g.t.txt" "$OUT"/"$s.t.txt" \
+		 > "$OUT"/"$s.t.eval"
 
-        echo "Evaluating $g and $s (canonicalized and reified)"
-        evaluate "$OUT"/"$g.cri.re.txt" "$OUT"/"$s.cri.re.txt" \
-		 > "$OUT"/"$s.cri.re.eval"
+        echo "Evaluating $g and $s (inv and attr-re)"
+        evaluate "$OUT"/"$g.i.a.txt" "$OUT"/"$s.i.a.txt" \
+		 > "$OUT"/"$s.i.a.eval"
 
-        echo "Evaluating $g and $s (canonicalized, reified, and conceptualized)"
-        evaluate "$OUT"/"$g.cri.ca.re.txt" "$OUT"/"$s.cri.ca.re.txt" \
-		 > "$OUT"/"$s.cri.ca.re.eval"
+        echo "Evaluating $g and $s (inv and relation-re)"
+        evaluate "$OUT"/"$g.i.r.txt" "$OUT"/"$s.i.r.txt" \
+		 > "$OUT"/"$s.i.r.eval"
 
-        echo "Evaluating $g and $s (canonicalized, reified, and topped)"
-        evaluate "$OUT"/"$g.cri.re.top.txt" "$OUT"/"$s.cri.re.top.txt" \
-		 > "$OUT"/"$s.cri.re.top.eval"
+        echo "Evaluating $g and $s (inv and topped)"
+        evaluate "$OUT"/"$g.i.t.txt" "$OUT"/"$s.i.t.txt" \
+		 > "$OUT"/"$s.i.t.eval"
+
+        echo "Evaluating $g and $s (inv, attr-re, and relation-re)"
+        evaluate "$OUT"/"$g.i.a.r.txt" "$OUT"/"$s.i.a.r.txt" \
+		 > "$OUT"/"$s.i.a.r.eval"
+
+        echo "Evaluating $g and $s (inv, attr-re, and topped)"
+        evaluate "$OUT"/"$g.i.a.t.txt" "$OUT"/"$s.i.a.t.txt" \
+		 > "$OUT"/"$s.i.a.t.eval"
+
+        echo "Evaluating $g and $s (inv, relation-re, and topped)"
+        evaluate "$OUT"/"$g.i.r.t.txt" "$OUT"/"$s.i.r.t.txt" \
+		 > "$OUT"/"$s.i.r.t.eval"
+
+        echo "Evaluating $g and $s (attr-re, relation-re, and topped)"
+        evaluate "$OUT"/"$g.a.r.t.txt" "$OUT"/"$s.a.r.t.txt" \
+		 > "$OUT"/"$s.a.r.t.eval"
+
+        echo "Evaluating $g and $s (inv, attr-re, relation-re, and topped)"
+        evaluate "$OUT"/"$g.i.a.r.t.txt" "$OUT"/"$s.i.a.r.t.txt" \
+		 > "$OUT"/"$s.i.a.r.t.eval"
     done
 fi
