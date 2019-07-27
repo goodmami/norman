@@ -19,7 +19,7 @@ EOF
 
 # redefine this as necessary
 evaluate() {
-    ~/repos/smatch/smatch.py --pr -f "$1" "$2"
+    ~/repos/smatch/smatch.py --pr -f "$2" "$1"
 }
 
 DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
@@ -198,6 +198,10 @@ if [ "$EVAL" == "true" ]; then
         echo "Evaluating $g and $s (inv and topped)"
         evaluate "$OUT"/"$g.i.t.txt" "$OUT"/"$s.i.t.txt" \
 		 > "$OUT"/"$s.i.t.eval"
+
+        echo "Evaluating $g and $s (attr-re and relation-re)"
+        evaluate "$OUT"/"$g.a.r.txt" "$OUT"/"$s.a.r.txt" \
+		 > "$OUT"/"$s.a.r.eval"
 
         echo "Evaluating $g and $s (inv, attr-re, and relation-re)"
         evaluate "$OUT"/"$g.i.a.r.txt" "$OUT"/"$s.i.a.r.txt" \

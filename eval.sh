@@ -2,7 +2,7 @@
 
 DATA=data
 OUT=out
-SMATCH=~/repos/smatch
+EVAL=~/repos/amr-evaluation/evaluation.sh
 
 export PYTHONPATH="$PYTHONPATH":~/repos/penman
 
