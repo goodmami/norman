@@ -160,7 +160,7 @@ def _dereification_agenda(g, co_map):
     return agenda
 
 
-def conceptualize(g):
+def reify_attributes(g):
     variables = g.variables()
     # filter out triples with empty instances
     triples = [t for t in g.triples()
@@ -185,8 +185,8 @@ def conceptualize(g):
     return penman.Graph(new_triples, g.top)
 
 
-def robust_load(s, node_tops=False):
-    if node_tops:
+def robust_load(s, preserve_structure=False):
+    if preserve_structure:
         lines = []
         for line in s.splitlines():
             if line.startswith('#'):
@@ -202,7 +202,7 @@ def robust_load(s, node_tops=False):
         for g in codec.iterdecode(s):
             yield g
     except penman.DecodeError as e:
-        yield from robust_load(s[e.pos+1:], node_tops)
+        yield from robust_load(s[e.pos+1:], preserve_structure)
 
 
 def load_reifications(f):
@@ -236,9 +236,9 @@ def main():
     parser.add_argument(
         '-c', '--collapse', metavar='FILE',
         help='collapse nodes to relations using mapping in FILE')
-    parser.add_argument('--conceptualize', action='store_true',
+    parser.add_argument('--reify-attributes', action='store_true',
                         help='ensure every node has a concept')
-    parser.add_argument('--node-tops', action='store_true',
+    parser.add_argument('--preserve-structure', action='store_true',
                         help='add relations to mark non-reentrant relations')
     parser.add_argument('--prefix', metavar='C', help='variable prefix')
     parser.add_argument('--indent', metavar='N', type=int, help='indent level')
@@ -255,10 +255,10 @@ def main():
         codec.canonical_role_inversion = True
 
     if hasattr(args.input, 'read'):
-        gs = robust_load(args.input.read(), args.node_tops)
+        gs = robust_load(args.input.read(), args.preserve_structure)
     else:
         with open(args.input) as fh:
-            gs = robust_load(fh.read(), args.node_tops)
+            gs = robust_load(fh.read(), args.preserve_structure)
 
     if args.reify:
         re_map = load_reifications(args.reify)
@@ -268,8 +268,8 @@ def main():
         co_map = load_dereifications(args.collapse)
         gs = [collapse(g, co_map) for g in gs]
 
-    if args.conceptualize:
-        gs = [conceptualize(g) for g in gs]
+    if args.reify_attributes:
+        gs = [reify_attributes(g) for g in gs]
 
     for g in gs:
         print(codec.encode(g, triples=args.triples))
