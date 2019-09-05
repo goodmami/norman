@@ -1,13 +1,13 @@
 
 # Norman: Normalized PENMAN (AMR)
 
-This is the code associated with the paper *AMR Normalization for
-Fairer Evaluation*.
+This is the code associated with the paper [*AMR Normalization for
+Fairer Evaluation*](https://arxiv.org/abs/1909.01568).
 
 If you are interested in using the normalization procedures with AMR,
-the [Penman][] project has incorporated the methods described by the
-paper. This repository is for reproducing the experiments of the
-paper.
+the next version of the [Penman][] project will incorporate the
+methods described by the paper. This repository is for reproducing the
+experiments of the paper.
 
 [Penman]: https://github.com/goodmami/penman
 
