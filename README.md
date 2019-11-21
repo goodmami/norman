@@ -5,8 +5,8 @@ This is the code associated with the paper [*AMR Normalization for
 Fairer Evaluation*](https://arxiv.org/abs/1909.01568).
 
 If you are interested in using the normalization procedures with AMR,
-the next version of the [Penman][] project will incorporate the
-methods described by the paper. This repository is for reproducing the
+the `0.7` version of the [Penman][] project incorporates the methods
+described by the paper. This repository is for reproducing the
 experiments of the paper.
 
 [Penman]: https://github.com/goodmami/penman
